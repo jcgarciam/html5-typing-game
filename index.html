@@ -120,10 +120,9 @@
                 current_challenge.match(c);
             };
             __gameOver = function(){
-                window.document.removeEventListener( "keydown" );
+                game_started = false;
                 deathSound.play();				
                 clearInterval(current_challenge.__interval);
-                game_started = false;
                 ctx.fillStyle= "red";
                 ctx.fillText( "GAME OVER", (max_width - ctx.measureText( "GAME OVER").width) / 2, (max_height / 2) + 100);
                 ctx.fillText( "HIT REFRESH TO START AGAIN", (max_width - ctx.measureText("HIT REFRESH TO START AGAIN").width) / 2, (max_height / 2 +20+ 100));
@@ -138,9 +137,11 @@
             app.StartGame = function(){
                 game_started = true;
                 window.document.addEventListener( "keydown", function (e){
-                    if(e.keyCode >= 60 && e.keyCode<= 90 || e.keyCode == 32){
-                        var c = String.fromCharCode(e.keyCode);
-                        __evaluateKey(c);
+                    if(game_started){
+                        if(e.keyCode >= 60 && e.keyCode<= 90 || e.keyCode == 32){
+                            var c = String.fromCharCode(e.keyCode);
+                            __evaluateKey(c);
+                        }
                     }
                 }, true);
                 current_challenge = new WordChallenge();
