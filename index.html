@@ -1,0 +1,174 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<style type="text/css">
+		*{
+			margin,padding: 0px;
+			font-family: 'Tahoma';
+		}
+		#main-container{
+			width: 100%;
+		}
+		.game-box{
+			margin: 0px auto;
+			display: block;
+			width: 70%;
+		}
+		canvas{
+			background-color:#000;
+			border:2px solid green;
+		}
+	</style>
+</head>
+<body>
+	<div id="main-container">
+		<div class="game-box">
+			<h2>Write the letters as fast as you can, before they reach the red mark.</h2>
+			<span>Author: Juan Carlos Garcia (Papa de Claudia)</span>
+			<div><strong>Copyright Notice</strong>: All images and sounds are trademark of their respective author.</div>
+			<canvas id="game-canvas" width="800px" height="500px"></canvas>
+		</div>
+	</div>
+	<script type="text/javascript">
+		var AppGame = (function (window, canvas, undefined) {
+			var max_width = canvas.width,
+				max_height= canvas.height,
+				current_challenge;
+
+			var ctx = canvas.getContext('2d');
+			ctx.font = 'bold 22px Courier';	
+
+			var letters                 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ    ",
+				word_max                = 8,
+				word_min                = 5,
+				level                   = 0,
+				char_px                 = ctx.measureText("X").width,
+				score                   = 0,
+				letter_delay            = 100,
+				min_letter_delay        = 20;
+				game_started            = true,
+				deathSound              = new Audio("assets/GameOver.wav"), // buffers automatically when created
+				hitLetterSound          = new Audio("assets/beep.wav");
+
+			var LetterSprite = function(pos, x_start){
+				this.character = letters[~~(( Math.random() * letters.length ) - 1 )];
+				this.x = x_start + (char_px * pos);
+				this.y = 100;
+				this.color = "green";
+			};
+
+			LetterSprite.prototype.render = function(){
+				ctx.fillStyle = "#fff";
+				if(this.character !== ' '){
+					ctx.fillText(this.character, this.x, this.y);
+				}else{
+					ctx.fillRect(this.x + 2, this.y - 13 , 10, 13);
+				}
+			}
+
+			var WordChallenge = function(appGame){
+				this.app = appGame;
+				this.sequence = [];
+
+				var len = ~~ (( Math.random() * word_max ) + word_min - 1 );
+				var x_start = ~~(Math.random() * (max_width - (len * char_px))) - 1;
+				for(var i = 0; i < len; i++){
+					var ll = new LetterSprite(i, x_start);
+					this.sequence.push(ll);
+				}
+
+				if(score % 10 === 0){
+					level++;
+					word_max += 3;
+					letter_delay -= 20;
+					letter_delay = Math.max(letter_delay, min_letter_delay);
+				}
+
+				this.__interval = setInterval(function(){
+					if(current_challenge.sequence.length > 0){
+						current_challenge.sequence[0].y += 2.5;
+					}
+				},letter_delay);
+			};
+
+			WordChallenge.prototype.match = function(c){
+				if(this.sequence[0].character === c){
+					this.sequence.splice(0,1);
+					score += 5;
+					hitLetterSound.play();
+				}else{
+					score -= 5;
+				}
+			};
+
+			WordChallenge.prototype.checkDeadLetter = function(){
+				if(this.sequence[0].y > 400){
+					__gameOver();
+				}
+			};			
+			WordChallenge.prototype.render = function(){
+				for(var i in this.sequence){
+					this.sequence[i].render();
+				}
+				this.checkDeadLetter();
+			}
+			var app = {};
+
+			__evaluateKey = function(c){
+				current_challenge.match(c);
+			};
+			__gameOver = function(){
+				window.document.removeEventListener( "keydown" );
+				deathSound.play();				
+				clearInterval(current_challenge.__interval);
+				game_started = false;
+				ctx.fillStyle= "red";
+				ctx.fillText( "GAME OVER", (max_width - ctx.measureText( "GAME OVER").width) / 2, (max_height / 2) + 100);
+				ctx.fillText( "HIT REFRESH TO START AGAIN", (max_width - ctx.measureText("HIT REFRESH TO START AGAIN").width) / 2, (max_height / 2 +20+ 100));
+
+				var image  = new Image();
+				image.onload = function() {
+			       ctx.drawImage(image, 310, 50);
+			    };
+				image.src = "assets/zombie.jpg";
+			}
+
+			app.StartGame = function(){
+				game_started = true;
+
+				window.document.addEventListener( "keydown", function (e){
+					if(e.keyCode >= 60 && e.keyCode<= 90 || e.keyCode == 32){
+						var c = String.fromCharCode(e.keyCode);
+						__evaluateKey(c);
+					}
+				}, true);				
+				current_challenge = new WordChallenge();
+				this.Render();
+			};
+
+			app.Render = function(){
+				if(game_started){
+                    ctx.save();
+					ctx.clearRect(0,0,max_width, max_height);
+					if(current_challenge.sequence.length == 0){
+						clearInterval(current_challenge.__interval);
+						current_challenge = new WordChallenge(this);
+					}
+					current_challenge.render();
+					ctx.fillStyle = "green";
+					ctx.fillText("SCORE: "+score, 0, 20);
+					ctx.fillText("LEVEL: "+ level, 0, 40);
+					ctx.fillStyle = "red";
+					ctx.fillRect(0,405,max_width,100);
+                    ctx.restore();
+					window.requestAnimationFrame(AppGame.Render);
+				}
+			};	
+
+			return app;
+		}(window, document.getElementById('game-canvas'), undefined));
+
+		AppGame.StartGame();
+	</script>
+</body>
+</html>
